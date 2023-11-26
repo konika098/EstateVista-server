@@ -30,6 +30,7 @@ async function run() {
     const usersCollection = client.db("EstateVistaDB").collection("users");
     const propertiesCollection = client.db("EstateVistaDB").collection("properties");
     const advertisementCollection = client.db("EstateVistaDB").collection("ad");
+    const serviceCollection = client.db("EstateVistaDB").collection("services");
      
 
     app.post('/jwt',async(req,res)=>{
@@ -171,10 +172,35 @@ async function run() {
       res.send(result)
     })
    
+    app.get('/services', async (req, res) => {
+      const cursor =await serviceCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+   
     app.post('/newAdvertisement', async (req, res) => {
       const newAdvertisement = req.body
 
       const result = await advertisementCollection.insertOne(newAdvertisement)
+      res.send(result)
+    })
+
+    app.put('/Status/:id', async(req,res)=>{
+      const id =req.params.id;
+      const query ={_id: new ObjectId(id)}
+      const updateStatus ={$set:{
+        verificationStatus:"verify"
+      }}
+      const result =await propertiesCollection.updateOne(query ,updateStatus)
+      res.send(result)
+    })
+    app.put('/Reject/:id', async(req,res)=>{
+      const id =req.params.id;
+      const query ={_id: new ObjectId(id)}
+      const updateStatus ={$set:{
+        verificationStatus:"reject"
+      }}
+      const result =await propertiesCollection.updateOne(query ,updateStatus)
       res.send(result)
     })
 
