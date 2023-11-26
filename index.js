@@ -28,6 +28,8 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     const usersCollection = client.db("EstateVistaDB").collection("users");
+    const propertiesCollection = client.db("EstateVistaDB").collection("properties");
+    const advertisementCollection = client.db("EstateVistaDB").collection("ad");
      
 
     app.post('/jwt',async(req,res)=>{
@@ -40,17 +42,40 @@ async function run() {
     //middlewares
     const verifyToken =(req,res,next)=>{
       console.log('insert verifyed token',req.headers)
-      if(req.headers.authorization){
-        return res.status(401).send({message:"forbidden access"});
-        
+      if(!req.headers.authorization){
+        return res.status(403).send({message:"unauthorized  access"});
+
       }
-      next( )
+      const token =req.headers.authorization.split(' ')[1];
+       jwt.verify(token,process.env.Access_Token,(err,decoded)=>{
+        if(err){
+          return res.status(401).send({message:"unauthorized access"});
+        }
+        req.decoded =decoded
+        next()
+       })
+      
     }
-    app.get('/users',verifyToken,async(req,res)=>{
+
+    const verifyAdmin=async(req,res,next)=>{
+      const email =req.decoded.email;
+      const query={
+       email:email
+      }
+      const user= await usersCollection.findOne(query)
+      const isAdmin = user?.role==='admin';
+      if(!isAdmin){
+        return res.status(403).send({message:"forbidden access"})
+      }
+      next()
+    } 
+    app.get('/user',verifyToken,verifyAdmin,async(req,res)=>{
       console.log(req.headers)
       const result =await usersCollection.find().toArray();
       res.send(result)
     })
+
+
     app.post('/users', async(req,res)=>{
       const user =req.body;
       const query={email:user.email}
@@ -71,7 +96,7 @@ async function run() {
 
     })
     //admin
-    app.patch('/users/admin/:id',async(req,res)=>{
+    app.patch('/users/admin/:id',verifyAdmin,verifyToken,async(req,res)=>{
      const id =req.params.id;
      const filter ={_id : new ObjectId(id)}
      const updatedDoc ={
@@ -82,6 +107,75 @@ async function run() {
       const result =await usersCollection.updateOne(filter,updatedDoc)
       res.send(result)
      
+    })
+    
+    app.get('/user/admin/:email',verifyToken,async(req,res)=>{
+      const email =req.params.email
+      if(email !== req.decoded.email){
+        return res.status(403).send({message:"forbidden access"})
+
+      }
+      const query={email:email}
+      const user=await usersCollection.findOne(query)
+      let admin =false
+      if(user){
+        admin =user?.role==='admin'
+      }
+      res.send({admin})
+      
+    })
+    app.get('/newAdvertisement', async (req, res) => {
+      const cursor =await advertisementCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+    //agent
+    app.patch('/users/agent/:id',verifyAdmin,verifyToken,async(req,res)=>{
+      const id =req.params.id;
+      const filter ={_id : new ObjectId(id)}
+      const updatedDoc ={
+       $set:{
+         role:"agent"
+       }
+     }
+       const result =await usersCollection.updateOne(filter,updatedDoc)
+       res.send(result)
+      
+     })
+      
+    app.get('/user/agent/:email',verifyToken,async(req,res)=>{
+      const email =req.params.email
+      if(email !== req.decoded.email){
+        return res.status(403).send({message:"forbidden access"})
+
+      }
+      const query={email:email}
+      const user=await usersCollection.findOne(query)
+      let agent =false
+      if(user){
+        agent =user?.role==='agent'
+      }
+      res.send({agent})
+      
+    })
+    app.post('/NewProperties', async (req, res) => {
+      const NewProperties = req.body
+
+      const result = await propertiesCollection.insertOne(NewProperties)
+      res.send(result)
+    })
+    
+    app.get('/NewPostProperties', async (req, res) => {
+      const cursor =await propertiesCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+   
+    app.post('/newAdvertisement', async (req, res) => {
+      const newAdvertisement = req.body
+
+      const result = await advertisementCollection.insertOne(newAdvertisement)
+      res.send(result)
     })
 
 
