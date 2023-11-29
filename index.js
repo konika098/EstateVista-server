@@ -31,6 +31,7 @@ async function run() {
     const propertiesCollection = client.db("EstateVistaDB").collection("properties");
     const advertisementCollection = client.db("EstateVistaDB").collection("ad");
     const serviceCollection = client.db("EstateVistaDB").collection("services");
+    const wishCollection = client.db("EstateVistaDB").collection("wishList");
      
 
     app.post('/jwt',async(req,res)=>{
@@ -70,6 +71,18 @@ async function run() {
       }
       next()
     } 
+    const verifyAgent=async(req,res,next)=>{
+      const email =req.decoded.email;
+      const query={
+       email:email
+      }
+      const user= await usersCollection.findOne(query)
+      const isAgent = user?.role==='agent';
+      if(!isAgent){
+        return res.status(403).send({message:"forbidden access"})
+      }
+      next()
+    } 
     app.get('/user',verifyToken,verifyAdmin,async(req,res)=>{
       console.log(req.headers)
       const result =await usersCollection.find().toArray();
@@ -88,16 +101,9 @@ async function run() {
       const result =await usersCollection.insertOne(user)
       res.send(result)
     })
-    //user deleted
-    app.delete('/users/:id',async (req,res)=>{
-      const id =req.params.id
-      const query ={_id: new ObjectId(id)}
-      const result =await usersCollection.deleteOne(query)
-      res.send(result)
 
-    })
     //admin
-    app.patch('/users/admin/:id',verifyAdmin,verifyToken,async(req,res)=>{
+    app.patch('/users/admin/:id',verifyToken,verifyAdmin,async(req,res)=>{
      const id =req.params.id;
      const filter ={_id : new ObjectId(id)}
      const updatedDoc ={
@@ -131,7 +137,7 @@ async function run() {
       res.send(result)
     })
     //agent
-    app.patch('/users/agent/:id',verifyAdmin,verifyToken,async(req,res)=>{
+    app.patch('/users/agent/:id',verifyToken, verifyAdmin,async(req,res)=>{
       const id =req.params.id;
       const filter ={_id : new ObjectId(id)}
       const updatedDoc ={
@@ -154,7 +160,7 @@ async function run() {
       const user=await usersCollection.findOne(query)
       let agent =false
       if(user){
-        agent =user?.role==='agent'
+       agent =user?.role==='agent'
       }
       res.send({agent})
       
@@ -177,6 +183,29 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result)
     })
+    app.get('/newAdvertisement', async (req, res) => {
+      const cursor =await advertisementCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+    app.get('/details/:id', async (req, res) => {
+      const cursor =await advertisementCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+    app.get('/AllProperties/:id', async (req, res) => {
+      const id =req.params.id
+      console.log();
+      const query ={_id: new ObjectId(id)}
+      const result =await propertiesCollection.findOne(query)
+      res.send(result)
+    })
+   
+    app.get('/AllProperties', async (req, res) => {
+      const cursor =await propertiesCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
+    })
    
     app.post('/newAdvertisement', async (req, res) => {
       const newAdvertisement = req.body
@@ -185,7 +214,7 @@ async function run() {
       res.send(result)
     })
 
-    app.put('/Status/:id', async(req,res)=>{
+    app.put('/Verify/:id', async(req,res)=>{
       const id =req.params.id;
       const query ={_id: new ObjectId(id)}
       const updateStatus ={$set:{
@@ -203,6 +232,52 @@ async function run() {
       const result =await propertiesCollection.updateOne(query ,updateStatus)
       res.send(result)
     })
+    //user
+    //wishList
+    app.post('/wishlist',async(req,res)=>{
+      const wishListItem =req.body;
+      const result =await wishCollection.insertOne(wishListItem)
+      res.send(result)
+    })
+    app.get('/wishlist', async (req, res) => {
+      const cursor =await wishCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+
+
+        //user deleted
+        app.delete('/users/:id',async (req,res)=>{
+          const id =req.params.id
+          const query ={_id: new ObjectId(id)}
+          const result =await usersCollection.deleteOne(query)
+          res.send(result)
+    
+        })
+        app.delete('/wishes/:id',async (req,res)=>{
+          const id =req.params.id
+          const query ={_id: new ObjectId(id)}
+          const result =await wishCollection.deleteOne(query)
+          res.send(result)
+    
+        })
+   
+
+    // app.get('/user/buyer/:email',verifyToken,async(req,res)=>{
+    //   const email =req.params.email
+    //   if(email !== req.decoded.email){
+    //     return res.status(403).send({message:"forbidden access"})
+
+    //   }
+    //   const query={email:email}
+    //   const user=await usersCollection.findOne(query)
+    //   let buyer =false
+    //   if(user){
+    //    buyer =user?.role==='user'
+    //   }
+    //   res.send({buyer})
+      
+    // })
 
 
 
