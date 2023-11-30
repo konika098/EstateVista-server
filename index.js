@@ -32,6 +32,7 @@ async function run() {
     const advertisementCollection = client.db("EstateVistaDB").collection("ad");
     const serviceCollection = client.db("EstateVistaDB").collection("services");
     const wishCollection = client.db("EstateVistaDB").collection("wishList");
+    const offerCollection = client.db("EstateVistaDB").collection("offer");
      
 
     app.post('/jwt',async(req,res)=>{
@@ -239,9 +240,28 @@ async function run() {
       const result =await wishCollection.insertOne(wishListItem)
       res.send(result)
     })
+  
     app.get('/wishlist', async (req, res) => {
       const cursor =await wishCollection.find();
       const result = await cursor.toArray();
+      res.send(result)
+    })
+
+    app.get('/wishList/:id', async (req, res) => {
+      const id =req.params.id
+      console.log();
+      const query ={_id: new ObjectId(id)}
+      const result =await wishCollection.findOne(query)
+      res.send(result)
+    })
+    app.get('/offerDetails', async (req, res) => {
+      const cursor =await offerCollection.find();
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+    app.post('/offerDetails',async(req,res)=>{
+      const offerDetails =req.body;
+      const result =await offerCollection.insertOne(offerDetails)
       res.send(result)
     })
 
@@ -256,10 +276,29 @@ async function run() {
         })
         app.delete('/wishes/:id',async (req,res)=>{
           const id =req.params.id
+          console.log({id});
           const query ={_id: new ObjectId(id)}
           const result =await wishCollection.deleteOne(query)
           res.send(result)
     
+        })
+        app.put('/Accept/:id', async(req,res)=>{
+          const id =req.params.id;
+          const query ={_id: new ObjectId(id)}
+          const updateStatus ={$set:{
+            verificationStatus:"Accepted"
+          }}
+          const result =await offerCollection.updateOne(query ,updateStatus)
+          res.send(result)
+        })
+        app.put('/reject/:id', async(req,res)=>{
+          const id =req.params.id;
+          const query ={_id: new ObjectId(id)}
+          const updateStatus ={$set:{
+            verificationStatus:"Rejected"
+          }}
+          const result =await offerCollection.updateOne(query ,updateStatus)
+          res.send(result)
         })
    
 
